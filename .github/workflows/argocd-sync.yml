@@ -8,12 +8,17 @@ on:
       - "k8s/**"
       - ".github/workflows/argocd-sync.yml"
 
+permissions:
+  contents: write
+
 jobs:
   argocd-sync:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Update backend image tag
         env:
@@ -37,16 +42,24 @@ jobs:
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
+          if git diff --quiet; then
+            echo "No manifest changes detected"
+            exit 0
+          fi
           git add k8s/*.yaml
-          git commit -m "ci: update image tags to ${{ github.sha }}" || echo "No changes to commit"
-          git push
+          git commit -m "ci: update image tags to ${{ github.sha }}"
+          git push origin HEAD:main
 
       - name: ArgoCD App Sync
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
         run: |
-          # Install argocd CLI
+          if [ -z "$ARGOCD_SERVER" ] || [ -z "$ARGOCD_AUTH_TOKEN" ]; then
+            echo "Skipping Argo CD sync because secrets are not configured"
+            exit 0
+          fi
+
           curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           chmod +x /usr/local/bin/argocd
-
-          # Sync application (requires ARGOCD_SERVER and ARGOCD_AUTH_TOKEN secrets)
-          argocd app sync ai-task-platform --server=${{ secrets.ARGOCD_SERVER }} --auth-token=${{ secrets.ARGOCD_AUTH_TOKEN }}
-        continue-on-error: true
+          argocd app sync ai-task-platform --server="$ARGOCD_SERVER" --auth-token="$ARGOCD_AUTH_TOKEN"
