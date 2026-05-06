@@ -1,366 +1,161 @@
-# AI Task Platform
+# AI Task Platform - Infrastructure Repository
 
-A full-stack distributed task processing system with a React frontend, Node.js/Express backend, and Python worker processes running on Kubernetes.
+This repository contains **Kubernetes manifests and infrastructure-as-code (IaC)** for the AI Task Platform. It is designed to work alongside the application repositories.
 
-## Features
+## Repository Structure
 
-User Authentication (JWT-based)
+```
+k8s/                      # Kubernetes manifests
++-- namespace.yaml        # Namespace definition
++-- backend-deployment.yaml      # Backend service deployment
++-- frontend-deployment.yaml     # Frontend service deployment
++-- redis-deployment.yaml        # Redis cache deployment
++-- worker-deployment.yaml       # Task worker deployment
++-- ingress.yaml                 # Nginx Ingress configuration
++-- argocd-app.yaml              # Argo CD Application manifest
 
-- Task Management Dashboard
-- Distributed Task Processing (Bull MQ + Redis)
-- Docker Containerization
-- Kubernetes Deployment (with Argo CD GitOps)
-- CI/CD with GitHub Actions
-- Scalable Worker Processes
+ARCHITECTURE.md                   # System design and architecture documentation
+```
 
-## Tech Stack
+## What This Repository Contains
 
-| Component     | Technology       |
-| ------------- | ---------------- |
-| Frontend      | React.js + Vite  |
-| Backend       | Node.js/Express  |
-| Worker        | Python (asyncio) |
-| Database      | MongoDB Atlas    |
-| Cache/Queue   | Redis + Bull MQ  |
-| Orchestration | Kubernetes       |
-| GitOps        | Argo CD          |
-| CI/CD         | GitHub Actions   |
+- **Kubernetes Deployment Manifests**: All `.yaml` files for deploying services to a K8s cluster
+- **Argo CD GitOps Setup**: Application manifests for automated deployments
+- **Infrastructure Documentation**: Architecture overview and deployment guides
 
-## Prerequisites
+## What This Repository Does NOT Contain
 
-- **Docker** (20.10+)
-- **Kubernetes** (1.24+) or Docker Desktop with K8s enabled
-- **kubectl** CLI
-- **Git**
-- **Node.js** 20+ (for local development)
-- **Python** 3.9+ (for worker development)
-- **MongoDB Atlas** account (or local MongoDB)
-- **Docker Hub** account (for image registry)
+- Application source code (backend, frontend, worker)
+- Docker build configurations
+- CI/CD pipelines for building images
+
+These are maintained in separate application repositories:
+- **Application Repository** (source code + Docker builds): `ai-task-platform-app`
 
 ## Quick Start
 
-### 1. Clone Repository
+### Prerequisites
+
+- Kubernetes cluster (1.24+)
+- `kubectl` CLI configured
+- Argo CD installed in the cluster (optional, for GitOps)
+
+### Deploy Using kubectl
 
 ```bash
-git clone https://github.com/bushrakhan/ai-task-platform.git
-cd ai-task-platform
-```
-
-### 2. Set Up Environment Variables
-
-Create `.env` files in respective folders:
-
-**backend/.env**
-
-```
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
-JWT_SECRET=your-secret-key
-PORT=5000
-```
-
-**worker/.env**
-
-```
-REDIS_URL=redis://redis-service:6379
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
-```
-
-### 3. Create Kubernetes Namespace
-
-```bash
-kubectl create namespace ai-task-platform
-```
-
-### 4. Deploy to Kubernetes
-
-**Option A: Direct Deployment**
-
-```bash
-# Deploy all services
+# Create namespace
 kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/redis-deployment.yaml
-kubectl apply -f k8s/backend-deployment.yaml
-kubectl apply -f k8s/frontend-deployment.yaml
-kubectl apply -f k8s/worker-deployment.yaml
-kubectl apply -f k8s/ingress.yaml
+
+# Deploy all services
+kubectl apply -f k8s/ -n ai-task-platform
 
 # Check status
 kubectl get pods -n ai-task-platform
 kubectl get svc -n ai-task-platform
 ```
 
-**Option B: Argo CD GitOps (Recommended)**
+### Deploy Using Argo CD (GitOps)
 
 ```bash
 # Install Argo CD
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-# Apply Argo CD Application manifest
+# Register this repository with Argo CD
 kubectl apply -f k8s/argocd-app.yaml
 
 # Monitor sync
-kubectl get application -n argocd
-argocd app get ai-task-platform
-```
-
-### 5. Access Application
-
-#### Local Development
-
-```bash
-# Frontend (http://localhost:5173)
-cd frontend && npm install && npm run dev
-
-# Backend (http://localhost:5000)
-cd backend && npm install && npm start
-
-# Worker
-cd worker && python -m pip install -r requirements.txt && python worker.py
-```
-
-#### Kubernetes (via Ingress)
-
-```
-http://localhost/         # Frontend
-http://localhost/api/...  # Backend API
-```
-
-## Local Development
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev           # Start dev server on http://localhost:5173
-npm run build         # Build for production
-npm run preview       # Preview production build
-```
-
-### Backend
-
-```bash
-cd backend
-npm install
-npm start             # Start server on http://localhost:5000
-# With nodemon for development:
-npm install -D nodemon
-npx nodemon server.js
-```
-
-### Worker
-
-```bash
-cd worker
-pip install -r requirements.txt
-python worker.py      # Start worker process
-```
-
-### Redis (Local)
-
-```bash
-# Using Docker
-docker run -p 6379:6379 redis:latest
-
-# Or Docker Compose
-docker-compose up redis
-```
-
-## Docker Build & Push
-
-Build images locally:
-
-```bash
-docker build -t your-registry/ai-task-backend:v1 ./backend
-docker build -t your-registry/ai-task-frontend:v1 ./frontend
-docker build -t your-registry/ai-task-worker:v1 ./worker
-
-# Push to registry
-docker push your-registry/ai-task-backend:v1
-docker push your-registry/ai-task-frontend:v1
-docker push your-registry/ai-task-worker:v1
-```
-
-Update image tags in k8s manifests:
-
-```bash
-# Update k8s/*.yaml with your registry credentials
-sed -i 's/bushrakhan9321/your-registry/g' k8s/*.yaml
-```
-
-## CI/CD Setup
-
-### GitHub Actions Secrets
-
-Add these secrets to GitHub repository settings:
-
-```
-DOCKER_USERNAME   → Your Docker Hub username
-DOCKER_PASSWORD   → Your Docker Hub access token
-ARGOCD_SERVER     → https://your-argocd-server.com
-ARGOCD_AUTH_TOKEN → Your Argo CD auth token
-```
-
-### Workflows
-
-Two workflows are configured:
-
-1. **docker-build.yml**: Builds and pushes Docker images on push to `main`
-2. **argocd-sync.yml**: Updates k8s manifests and triggers Argo CD sync
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login and get JWT token
-
-### Tasks
-
-- `GET /api/tasks` - List user's tasks (requires auth)
-- `POST /api/tasks` - Create new task (requires auth)
-- `GET /api/tasks/:id` - Get task details
-- `PUT /api/tasks/:id` - Update task status
-
-## Kubernetes Commands
-
-```bash
-# View pods
-kubectl get pods -n ai-task-platform
-kubectl describe pod <pod-name> -n ai-task-platform
-kubectl logs <pod-name> -n ai-task-platform
-
-# Scale worker replicas
-kubectl scale deployment worker --replicas=5 -n ai-task-platform
-
-# Port forward (testing)
-kubectl port-forward svc/backend-service 5000:5000 -n ai-task-platform
-kubectl port-forward svc/frontend-service 5173:80 -n ai-task-platform
-
-# Update deployment image
-kubectl set image deployment/backend backend=your-registry/ai-task-backend:v2 -n ai-task-platform
-
-# View Argo CD applications
-kubectl get applications -n argocd
 argocd app get ai-task-platform -n argocd
 ```
 
-## Troubleshooting
+## Configuration
 
-### Pod CrashLoopBackOff
+All services are configured via environment variables in their respective deployment manifests. Update these files before deploying:
 
-Check logs:
+### Backend Deployment
+- `MONGO_URI`: MongoDB connection string
+- `JWT_SECRET`: JWT signing secret
 
+### Worker Deployment
+- `MONGO_URI`: MongoDB connection string
+- `REDIS_URL`: Redis connection URL
+
+### Frontend Deployment
+- `VITE_API_URL`: Backend API URL (optional, defaults to `/api`)
+
+## Services Deployed
+
+| Service | Type | Port | Purpose |
+|---------|------|------|---------|
+| Frontend | ClusterIP | 80 ? 5173 | React UI |
+| Backend | ClusterIP | 5000 | Express API |
+| Redis | ClusterIP | 6379 | Cache & Job Queue |
+| Worker | Deployment | - | Task processor |
+
+## Ingress Configuration
+
+The `ingress.yaml` file configures routing:
+
+- `/` ? Frontend (port 80)
+- `/api/*` ? Backend API (port 5000)
+
+Requires Nginx Ingress Controller to be installed:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.1/deploy/static/provider/cloud/deploy.yaml
+```
+
+## Scaling
+
+Scale individual services:
+
+```bash
+# Scale backend to 3 replicas
+kubectl scale deployment backend --replicas=3 -n ai-task-platform
+
+# Scale workers to 5 replicas
+kubectl scale deployment worker --replicas=5 -n ai-task-platform
+```
+
+## Monitoring & Troubleshooting
+
+### View Logs
 ```bash
 kubectl logs <pod-name> -n ai-task-platform
+kubectl logs -f deployment/backend -n ai-task-platform
+```
+
+### Check Pod Status
+```bash
 kubectl describe pod <pod-name> -n ai-task-platform
+kubectl get events -n ai-task-platform --sort-by='.lastTimestamp'
 ```
 
-Common issues:
-
-- Missing environment variables in deployment
-- Database connection string invalid
-- Image pull issues (check imagePullPolicy)
-- Missing dependencies (npm install, pip install)
-
-### Ingress Not Working
-
+### Port Forward for Testing
 ```bash
-# Check Ingress status
-kubectl get ingress -n ai-task-platform
-kubectl describe ingress ai-task-platform-ingress -n ai-task-platform
-
-# Check Nginx controller
-kubectl get pods -n ingress-nginx
-```
-
-### Redis Connection Issues
-
-```bash
-# Test Redis connectivity
-kubectl run -it redis-cli --image=redis:latest --restart=Never -- redis-cli -h redis-service -p 6379 ping
-```
-
-## Monitoring
-
-### View Metrics
-
-```bash
-# Resource usage
-kubectl top pods -n ai-task-platform
-kubectl top nodes
-
-# Pod events
-kubectl get events -n ai-task-platform
-```
-
-### Logs
-
-```bash
-# Stream logs
-kubectl logs -f <pod-name> -n ai-task-platform
-
-# Multiple pods
-kubectl logs -f -l app=backend -n ai-task-platform
+kubectl port-forward svc/backend-service 5000:5000 -n ai-task-platform
+kubectl port-forward svc/frontend-service 5173:80 -n ai-task-platform
 ```
 
 ## Architecture
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed system design and data flow.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed system design, data flow diagrams, and component descriptions.
 
-## Project Structure
+## Related Repositories
 
-```
-.
-├── frontend/              # React app with Vite
-│   ├── src/
-│   ├── public/
-│   ├── Dockerfile
-│   └── package.json
-├── backend/               # Express.js API server
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── middleware/
-│   ├── Dockerfile
-│   └── package.json
-├── worker/                # Python task worker
-│   ├── Dockerfile
-│   └── worker.py
-├── k8s/                   # Kubernetes manifests
-│   ├── namespace.yaml
-│   ├── backend-deployment.yaml
-│   ├── frontend-deployment.yaml
-│   ├── redis-deployment.yaml
-│   ├── worker-deployment.yaml
-│   ├── ingress.yaml
-│   └── argocd-app.yaml
-├── .github/workflows/     # CI/CD pipelines
-│   ├── docker-build.yml
-│   └── argocd-sync.yml
-├── docker-compose.yml     # Local development
-├── ARCHITECTURE.md        # System design
-└── README.md              # This file
-```
+- **Application Code**: https://github.com/Bushra-git/ai-task-platform-app
 
 ## Contributing
 
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Commit changes: `git commit -am 'Add feature'`
-3. Push to branch: `git push origin feature/your-feature`
-4. Open Pull Request
+1. Create a feature branch for infrastructure changes
+2. Update the relevant `.yaml` manifests
+3. Test in a local Kubernetes cluster
+4. Submit a pull request with description of changes
+5. After merge, Argo CD will automatically sync the changes if configured
 
 ## License
 
-MIT License - See LICENSE file for details
-
-## Support
-
-For issues and questions:
-
-- GitHub Issues: https://github.com/bushrakhan/ai-task-platform/issues
-- Email: support@example.com
+MIT License
 
 ---
 
