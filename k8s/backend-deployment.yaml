@@ -21,7 +21,7 @@ spec:
       containers:
         - name: backend
 
-          image: bushrakhan9321/ai-task-backend:v4
+          image: bushrakhan9321/ai-task-backend:716d5fe5c0a24a3fa1679b7f564eb24ab27dbe6e
           imagePullPolicy: IfNotPresent
 
           ports:

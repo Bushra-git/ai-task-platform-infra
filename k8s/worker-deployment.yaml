@@ -21,7 +21,7 @@ spec:
       containers:
         - name: worker
 
-          image: bushrakhan9321/ai-task-worker:v1
+          image: bushrakhan9321/ai-task-worker:716d5fe5c0a24a3fa1679b7f564eb24ab27dbe6e
           imagePullPolicy: Always
 
           env:
