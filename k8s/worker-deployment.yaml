@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: worker
+  namespace: ai-task-platform
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: worker
+
+  template:
+    metadata:
+      labels:
+        app: worker
+
+    spec:
+      containers:
+        - name: worker
+
+          image: bushrakhan9321/ai-task-worker:v1
+          imagePullPolicy: Always
+
+          env:
+            - name: MONGO_URI
+              value: "mongodb+srv://Bushrakhan:Rom9321@cluster0.v4z5qz2.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0"

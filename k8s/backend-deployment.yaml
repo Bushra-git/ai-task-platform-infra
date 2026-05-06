@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: backend
+  namespace: ai-task-platform
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: backend
+
+  template:
+    metadata:
+      labels:
+        app: backend
+
+    spec:
+      containers:
+        - name: backend
+
+          image: bushrakhan9321/ai-task-backend:v4
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: MONGO_URI
+              value: "mongodb+srv://Bushrakhan:Rom9321@cluster0.v4z5qz2.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0"
+
+            - name: JWT_SECRET
+              value: "mysecretkey"
+
+---
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: backend-service
+  namespace: ai-task-platform
+
+spec:
+  selector:
+    app: backend
+
+  ports:
+    - port: 5000
+      targetPort: 5000
