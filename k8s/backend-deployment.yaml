@@ -29,10 +29,16 @@ spec:
 
           env:
             - name: MONGO_URI
-              value: "mongodb+srv://Bushrakhan:Rom9321@cluster0.v4z5qz2.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0"
+              valueFrom:
+                secretKeyRef:
+                  name: ai-task-platform-secrets
+                  key: MONGO_URI
 
             - name: JWT_SECRET
-              value: "mysecretkey"
+              valueFrom:
+                secretKeyRef:
+                  name: ai-task-platform-secrets
+                  key: JWT_SECRET
 
 ---
 apiVersion: v1
